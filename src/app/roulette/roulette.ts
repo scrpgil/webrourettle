@@ -38,14 +38,7 @@ export class Roulette implements OnInit, AfterViewInit, OnDestroy {
   private bellSound: AudioBuffer | null = null;
   private clickInterval: any = null;
   
-  segments: WheelSegment[] = [
-    { text: '選択肢1', fillStyle: '#FF6B6B', weight: 1 },
-    { text: '選択肢2', fillStyle: '#4ECDC4', weight: 1 },
-    { text: '選択肢3', fillStyle: '#45B7D1', weight: 1 },
-    { text: '選択肢4', fillStyle: '#96CEB4', weight: 1 },
-    { text: '選択肢5', fillStyle: '#FFEAA7', weight: 1 },
-    { text: '選択肢6', fillStyle: '#DDA0DD', weight: 1 }
-  ];
+  segments: WheelSegment[] = [];
   
   newItem: NewItem = {
     text: '',
@@ -68,6 +61,16 @@ export class Roulette implements OnInit, AfterViewInit, OnDestroy {
     '#FF9F43', '#10AC84', '#5F27CD', '#00D2D3', '#FF6348', '#2ED573',
     '#A742FF', '#FF5722', '#8BC34A', '#2196F3', '#FF9800', '#9C27B0',
     '#E91E63', '#795548', '#607D8B', '#FF7043', '#66BB6A', '#42A5F5'
+  ];
+
+  // デフォルトセグメント
+  private defaultSegments: WheelSegment[] = [
+    { text: '選択肢1', fillStyle: '#FF6B6B', weight: 1 },
+    { text: '選択肢2', fillStyle: '#4ECDC4', weight: 1 },
+    { text: '選択肢3', fillStyle: '#45B7D1', weight: 1 },
+    { text: '選択肢4', fillStyle: '#96CEB4', weight: 1 },
+    { text: '選択肢5', fillStyle: '#FFEAA7', weight: 1 },
+    { text: '選択肢6', fillStyle: '#DDA0DD', weight: 1 }
   ];
 
   get wheelSize(): number {
@@ -131,8 +134,11 @@ export class Roulette implements OnInit, AfterViewInit, OnDestroy {
       console.error('Winwheel library not loaded');
     }
     
-    // LocalStorageから設定を読み込み
+    // LocalStorageから設定を読み込み、なければデフォルトを設定
     this.loadFromLocalStorage();
+    if (this.segments.length === 0) {
+      this.segments = [...this.defaultSegments];
+    }
     
     // 項目表示を調整
     this.adjustItemsPerPage();
@@ -971,6 +977,62 @@ export class Roulette implements OnInit, AfterViewInit, OnDestroy {
     };
     
     trackSegment();
+  }
+
+  // デフォルトに戻す
+  resetToDefault() {
+    if (this.isSpinning) return;
+    
+    this.segments = [...this.defaultSegments];
+    this.lastResult = null;
+    this.lastResultIndex = -1;
+    this.currentPointingSegment = null;
+    this.adjustItemsPerPage();
+    this.saveToLocalStorage();
+    this.initializeWheel();
+  }
+
+  // 当選者を除外
+  excludeWinner() {
+    if (this.isSpinning || this.lastResultIndex < 0 || this.segments.length <= 1) return;
+    
+    const winnerName = this.segments[this.lastResultIndex].text;
+    
+    // 当選者を除外
+    this.segments.splice(this.lastResultIndex, 1);
+    
+    // 結果をクリア
+    this.lastResult = null;
+    this.lastResultIndex = -1;
+    this.currentPointingSegment = null;
+    
+    this.adjustItemsPerPage();
+    this.saveToLocalStorage();
+    this.initializeWheel();
+    
+    // フィードバック
+    alert(`「${winnerName}」を除外しました。`);
+  }
+
+  // 全削除の確認
+  confirmAndClearAll() {
+    if (this.isSpinning) return;
+    
+    const confirmed = confirm('全ての項目を削除してデフォルトに戻しますか？\nこの操作は取り消せません。');
+    if (confirmed) {
+      this.resetToDefault();
+    }
+  }
+
+  // 全て削除（内部用）
+  private clearAllItems() {
+    this.segments = [];
+    this.lastResult = null;
+    this.lastResultIndex = -1;
+    this.currentPointingSegment = null;
+    this.adjustItemsPerPage();
+    this.saveToLocalStorage();
+    this.initializeWheel();
   }
 
   ngOnDestroy() {

@@ -143,6 +143,41 @@
         </p>
       </div>
 
+      <!-- クイックアクション -->
+      <div class="mb-6 p-4 bg-blue-50 rounded-lg">
+        <h4 class="font-medium mb-3">クイックアクション</h4>
+        <div class="flex flex-wrap gap-3">
+          <button
+            (click)="resetToDefault()"
+            class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded text-sm"
+            [disabled]="isSpinning"
+          >
+            🔄 デフォルトに戻す
+          </button>
+          @if (lastResult && lastResultIndex >= 0) {
+          <button
+            (click)="excludeWinner()"
+            class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded text-sm"
+            [disabled]="isSpinning || segments.length <= 1"
+          >
+            🚫 当選者を除外
+          </button>
+          }
+          @if (segments.length > 1) {
+          <button
+            (click)="confirmAndClearAll()"
+            class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded text-sm"
+            [disabled]="isSpinning"
+          >
+            🗑️ 全て削除
+          </button>
+          }
+        </div>
+        <p class="text-xs text-gray-600 mt-2">
+          項目の管理機能です。デフォルトは6項目の初期状態に戻します。
+        </p>
+      </div>
+
       <!-- 項目編集 -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
