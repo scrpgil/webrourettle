@@ -1,0 +1,149 @@
+<div class="max-w-4xl mx-auto">
+  <div class="bg-white rounded-lg shadow-lg p-6">
+    <!-- ルーレット本体 -->
+    <div class="text-center mb-8">
+      <div
+        class="relative mx-auto"
+        [style.width.px]="wheelSize"
+        [style.height.px]="wheelSize"
+      >
+        <!-- ルーレット外枠とインジケーター -->
+        <div
+          class="absolute inset-0 rounded-full border-8 border-yellow-400 shadow-2xl bg-gradient-to-br from-yellow-100 to-yellow-300 p-2 flex items-center justify-center"
+        >
+          <!-- メインポインター（右側、左向き） -->
+          <div
+            class="absolute top-1/2 right-0 transform -translate-y-1/2 translate-x-3 z-20"
+          >
+            <div class="relative">
+              <!-- ポインターの影 -->
+              <div
+                class="absolute top-1 left-2 w-0 h-0 border-t-[20px] border-b-[20px] border-r-[40px] border-t-transparent border-b-transparent border-r-gray-400 opacity-50"
+              ></div>
+              <!-- メインポインター -->
+              <div
+                class="ml-1 w-0 h-0 border-t-[20px] border-b-[20px] border-r-[40px] border-t-transparent border-b-transparent border-r-red-600 drop-shadow-lg"
+              ></div>
+            </div>
+          </div>
+
+          <!-- キャンバス -->
+          <canvas
+            #wheelCanvas
+            [id]="canvasId"
+            [width]="wheelSize - 16"
+            [height]="wheelSize - 16"
+            class="mx-auto rounded-full shadow-inner"
+            [style.width.px]="wheelSize - 16"
+            [style.height.px]="wheelSize - 16"
+          >
+          </canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- スピンボタン -->
+    <div class="text-center mb-8">
+      <button
+        (click)="spinWheel()"
+        [disabled]="isSpinning"
+        class="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white font-bold py-3 px-8 rounded-lg text-xl transition-colors"
+      >
+        {{ isSpinning ? 'スピン中...' : 'スピン!' }}
+      </button>
+    </div>
+
+    <!-- 結果表示 -->
+    @if (lastResult) {
+    <div
+      class="bg-gradient-to-r from-green-400 to-blue-500 text-white px-6 py-4 rounded-lg mb-6 shadow-lg animate-pulse"
+    >
+      <div class="flex items-center justify-center space-x-3">
+        <div class="text-2xl">🎉</div>
+        <div>
+          <div class="text-sm font-medium">当選結果</div>
+          <div class="text-xl font-bold">{{ lastResult }}</div>
+        </div>
+        <div class="text-2xl">🎉</div>
+      </div>
+    </div>
+    }
+
+    <!-- 設定セクション -->
+    <div class="border-t pt-6">
+      <h3 class="text-xl font-bold mb-4">ルーレット設定</h3>
+
+      <!-- 項目編集 -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2"
+            >項目を追加</label
+          >
+          <div class="flex gap-2">
+            <input
+              type="text"
+              [(ngModel)]="newItem.text"
+              placeholder="項目名"
+              class="flex-1 border border-gray-300 rounded px-3 py-2"
+            />
+            <input
+              type="number"
+              [(ngModel)]="newItem.weight"
+              placeholder="比率"
+              min="0.1"
+              max="10"
+              step="0.1"
+              class="w-20 border border-gray-300 rounded px-3 py-2"
+            />
+            <input
+              type="color"
+              [(ngModel)]="newItem.color"
+              class="w-12 h-10 border border-gray-300 rounded"
+            />
+            <button
+              (click)="addItem()"
+              class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded"
+            >
+              追加
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 既存項目一覧 -->
+      <div class="mt-4">
+        <h4 class="font-medium mb-2">現在の項目</h4>
+        <div class="space-y-2">
+          @for (item of segments; track item.text) {
+          <div class="flex items-center gap-2 p-2 bg-gray-50 rounded">
+            <div
+              class="w-6 h-6 rounded border"
+              [style.background-color]="item.fillStyle"
+            ></div>
+            <span class="flex-1">{{ item.text }}</span>
+            <div class="flex items-center gap-1">
+              <span class="text-xs text-gray-500">比率:</span>
+              <input
+                type="number"
+                [(ngModel)]="item.weight"
+                (ngModelChange)="onWeightChange()"
+                min="0.1"
+                max="10"
+                step="0.1"
+                class="w-16 text-sm border border-gray-300 rounded px-2 py-1"
+              />
+            </div>
+            <span class="text-xs text-gray-500 min-w-[3rem]">{{ getSegmentPercentage(item) }}%</span>
+            <button
+              (click)="removeItem(item)"
+              class="text-red-500 hover:text-red-700 px-2 py-1 text-sm"
+            >
+              削除
+            </button>
+          </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
