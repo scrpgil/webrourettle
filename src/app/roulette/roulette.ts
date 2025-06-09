@@ -51,6 +51,14 @@ export class Roulette implements OnInit, AfterViewInit, OnDestroy {
     weight: 1
   };
 
+  // デフォルトカラーパレット
+  private defaultColors = [
+    '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD',
+    '#FF9F43', '#10AC84', '#5F27CD', '#00D2D3', '#FF6348', '#2ED573',
+    '#A742FF', '#FF5722', '#8BC34A', '#2196F3', '#FF9800', '#9C27B0',
+    '#E91E63', '#795548', '#607D8B', '#FF7043', '#66BB6A', '#42A5F5'
+  ];
+
   ngOnInit() {
     // Winwheel.jsライブラリのロード確認
     if (typeof Winwheel === 'undefined') {
@@ -159,6 +167,10 @@ export class Roulette implements OnInit, AfterViewInit, OnDestroy {
         requestAnimationFrame(animate);
       } else {
         // アニメーション完了、結果を決定
+        // まず音を停止
+        this.isSpinning = false;
+        this.stopClickingSounds();
+        
         // 上向きポインターが指すセグメントを計算
         const finalAngle = (this.currentRotation % 360);
         
@@ -170,7 +182,17 @@ export class Roulette implements OnInit, AfterViewInit, OnDestroy {
         const resultIndex = this.getSegmentIndexFromAngle(pointerAngle);
         const result = this.segments[resultIndex] || this.segments[0];
         this.lastResultIndex = resultIndex;
-        this.onSpinComplete({ text: result.text });
+        
+        // ベルの音を即座に再生
+        this.playBellSound();
+        
+        // 結果を設定
+        this.lastResult = result.text;
+        
+        // 当選位置マーカー付きで再描画
+        setTimeout(() => {
+          this.drawWheelWithWinner();
+        }, 100);
       }
     };
     
@@ -334,6 +356,7 @@ export class Roulette implements OnInit, AfterViewInit, OnDestroy {
   }
 
   onSpinComplete(indicatedSegment: any) {
+    // Winwheelライブラリ使用時のコールバック
     this.isSpinning = false;
     this.lastResult = indicatedSegment.text;
     
@@ -548,9 +571,10 @@ export class Roulette implements OnInit, AfterViewInit, OnDestroy {
     const acceleration = 1.05; // 減速率
 
     const playClick = () => {
+      // スピンが停止したらクリック音も停止
       if (!this.isSpinning) {
         if (this.clickInterval) {
-          clearInterval(this.clickInterval);
+          clearTimeout(this.clickInterval);
           this.clickInterval = null;
         }
         return;
@@ -561,9 +585,7 @@ export class Roulette implements OnInit, AfterViewInit, OnDestroy {
       // 徐々に間隔を長くする（減速効果）
       clickSpeed = Math.min(clickSpeed * acceleration, maxSpeed);
       
-      if (this.clickInterval) {
-        clearInterval(this.clickInterval);
-      }
+      // 次のクリック音をスケジュール
       this.clickInterval = setTimeout(playClick, clickSpeed);
     };
 
@@ -573,7 +595,7 @@ export class Roulette implements OnInit, AfterViewInit, OnDestroy {
 
   private stopClickingSounds() {
     if (this.clickInterval) {
-      clearInterval(this.clickInterval);
+      clearTimeout(this.clickInterval);
       this.clickInterval = null;
     }
   }
@@ -638,6 +660,128 @@ export class Roulette implements OnInit, AfterViewInit, OnDestroy {
     const totalWeight = this.segments.reduce((sum, seg) => sum + (seg.weight || 1), 0);
     const percentage = ((segment.weight || 1) / totalWeight) * 100;
     return percentage.toFixed(1);
+  }
+
+  onCsvFileSelected(event: any) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e: any) => {
+      const csvContent = e.target.result;
+      this.parseCsvAndUpdateSegments(csvContent);
+    };
+    reader.readAsText(file);
+  }
+
+  private parseCsvAndUpdateSegments(csvContent: string) {
+    try {
+      const lines = csvContent.split('\n').filter(line => line.trim());
+      const newSegments: WheelSegment[] = [];
+      
+      lines.forEach((line, index) => {
+        const columns = this.parseCsvLine(line);
+        if (columns.length === 0) return;
+
+        const name = columns[0]?.trim();
+        if (!name) return;
+
+        // 比率を解析（デフォルト: 1）
+        let weight = 1;
+        if (columns.length > 1 && columns[1]?.trim()) {
+          const parsedWeight = parseFloat(columns[1].trim());
+          if (!isNaN(parsedWeight) && parsedWeight > 0) {
+            weight = parsedWeight;
+          }
+        }
+
+        // カラーを解析（デフォルト: パレットから自動選択）
+        let color = this.defaultColors[index % this.defaultColors.length];
+        if (columns.length > 2 && columns[2]?.trim()) {
+          const specifiedColor = columns[2].trim();
+          // #で始まるか、有効なカラー名かチェック
+          if (this.isValidColor(specifiedColor)) {
+            color = specifiedColor;
+          }
+        }
+
+        newSegments.push({
+          text: name,
+          fillStyle: color,
+          weight: weight
+        });
+      });
+
+      if (newSegments.length > 0) {
+        this.segments = newSegments;
+        this.saveToLocalStorage();
+        this.initializeWheel();
+        console.log(`CSV読み込み完了: ${newSegments.length}個の項目を追加しました`);
+      } else {
+        alert('有効なデータが見つかりませんでした。CSV形式を確認してください。');
+      }
+    } catch (error) {
+      console.error('CSV解析エラー:', error);
+      alert('CSVファイルの解析に失敗しました。ファイル形式を確認してください。');
+    }
+  }
+
+  private parseCsvLine(line: string): string[] {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      
+      if (char === '"') {
+        inQuotes = !inQuotes;
+      } else if (char === ',' && !inQuotes) {
+        result.push(current);
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    
+    result.push(current);
+    return result;
+  }
+
+  private isValidColor(color: string): boolean {
+    // #で始まる16進数カラーかチェック
+    if (color.startsWith('#')) {
+      const hex = color.slice(1);
+      return /^[0-9A-Fa-f]{3}$|^[0-9A-Fa-f]{6}$/.test(hex);
+    }
+    
+    // CSSカラー名かチェック（簡易版）
+    const namedColors = [
+      'red', 'green', 'blue', 'yellow', 'orange', 'purple', 'pink', 'brown',
+      'black', 'white', 'gray', 'grey', 'cyan', 'magenta', 'lime', 'navy',
+      'maroon', 'olive', 'aqua', 'silver', 'teal', 'fuchsia'
+    ];
+    
+    return namedColors.includes(color.toLowerCase());
+  }
+
+  exportToCsv() {
+    const csvContent = this.segments.map(segment => {
+      const name = `"${segment.text.replace(/"/g, '""')}"`;
+      const weight = segment.weight || 1;
+      const color = segment.fillStyle;
+      return `${name},${weight},${color}`;
+    }).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'roulette_settings.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   }
 
   ngOnDestroy() {
