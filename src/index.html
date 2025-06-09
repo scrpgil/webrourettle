@@ -3,8 +3,18 @@
 <head>
   <meta charset="utf-8">
   <title>WebWheel</title>
-  <base href="/">
+  <base href="/webrourettle/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>
+    // GitHub Pages SPA redirect handler
+    (function(){
+      var redirect = sessionStorage.redirect;
+      delete sessionStorage.redirect;
+      if (redirect && redirect != location.href) {
+        history.replaceState(null, null, redirect);
+      }
+    })();
+  </script>
   <link rel="icon" type="image/x-icon" href="favicon.ico">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/winwheel@2.8.0/dist/Winwheel.min.js"></script>
