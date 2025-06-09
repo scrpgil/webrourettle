@@ -143,15 +143,50 @@
 
       <!-- 既存項目一覧 -->
       <div class="mt-4">
-        <h4 class="font-medium mb-2">現在の項目</h4>
+        <div class="flex justify-between items-center mb-3">
+          <h4 class="font-medium">現在の項目 ({{ segments.length }}個)</h4>
+          @if (segments.length > 10) {
+          <div class="flex items-center gap-2">
+            <input
+              type="text"
+              [(ngModel)]="searchTerm"
+              placeholder="項目を検索..."
+              class="border border-gray-300 rounded px-3 py-1 text-sm w-40"
+            />
+            @if (searchTerm) {
+            <button
+              (click)="resetSearch()"
+              class="text-gray-500 hover:text-gray-700 text-sm"
+              title="検索をクリア"
+            >
+              ✕
+            </button>
+            }
+          </div>
+          }
+        </div>
+
+        @if (filteredSegments.length === 0) {
+        <div class="text-gray-500 text-center py-4">
+          @if (searchTerm) {
+          <p>「{{ searchTerm }}」に一致する項目がありません</p>
+          } @else {
+          <p>項目がありません</p>
+          }
+        </div>
+        } @else {
+        
+        <!-- 項目リスト -->
         <div class="space-y-2">
-          @for (item of segments; track item.text) {
+          @for (item of paginatedSegments; track item.text) {
           <div class="flex items-center gap-2 p-2 bg-gray-50 rounded">
             <div
               class="w-6 h-6 rounded border"
               [style.background-color]="item.fillStyle"
             ></div>
-            <span class="flex-1">{{ item.text }}</span>
+            <span class="flex-1 min-w-0">
+              <span class="truncate block" [title]="item.text">{{ item.text }}</span>
+            </span>
             <div class="flex items-center gap-1">
               <span class="text-xs text-gray-500">比率:</span>
               <input
@@ -174,6 +209,42 @@
           </div>
           }
         </div>
+
+        <!-- ページネーション -->
+        @if (totalPages > 1) {
+        <div class="flex justify-center items-center gap-2 mt-4">
+          <button
+            (click)="changePage(currentPage - 1)"
+            [disabled]="currentPage === 1"
+            class="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50 hover:bg-gray-50"
+          >
+            前へ
+          </button>
+          
+          @for (page of pageNumbers; track page) {
+          <button
+            (click)="changePage(page)"
+            [class]="'px-3 py-1 text-sm border rounded ' + (currentPage === page ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-300 hover:bg-gray-50')"
+          >
+            {{ page }}
+          </button>
+          }
+          
+          <button
+            (click)="changePage(currentPage + 1)"
+            [disabled]="currentPage === totalPages"
+            class="px-3 py-1 text-sm border border-gray-300 rounded disabled:opacity-50 hover:bg-gray-50"
+          >
+            次へ
+          </button>
+        </div>
+        
+        <div class="text-center text-xs text-gray-500 mt-2">
+          {{ displayRange }}
+        </div>
+        }
+        
+        }
       </div>
     </div>
   </div>

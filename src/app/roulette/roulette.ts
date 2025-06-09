@@ -26,7 +26,9 @@ export class Roulette implements OnInit, AfterViewInit, OnDestroy {
   
   wheel: any;
   canvasId = 'wheelCanvas';
-  wheelSize = 400;
+  private baseWheelSize = 400;
+  private minWheelSize = 300;
+  private maxWheelSize = 800;
   isSpinning = false;
   lastResult: string | null = null;
   lastResultIndex: number = -1;
@@ -51,6 +53,11 @@ export class Roulette implements OnInit, AfterViewInit, OnDestroy {
     weight: 1
   };
 
+  // 項目一覧の表示制御
+  searchTerm = '';
+  currentPage = 1;
+  itemsPerPage = 10;
+
   // デフォルトカラーパレット
   private defaultColors = [
     '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD',
@@ -58,6 +65,61 @@ export class Roulette implements OnInit, AfterViewInit, OnDestroy {
     '#A742FF', '#FF5722', '#8BC34A', '#2196F3', '#FF9800', '#9C27B0',
     '#E91E63', '#795548', '#607D8B', '#FF7043', '#66BB6A', '#42A5F5'
   ];
+
+  get wheelSize(): number {
+    const segmentCount = this.segments.length;
+    
+    // 項目数に応じてサイズを動的に計算
+    if (segmentCount <= 10) {
+      return this.baseWheelSize;
+    } else if (segmentCount <= 50) {
+      return Math.min(this.baseWheelSize + (segmentCount - 10) * 5, this.maxWheelSize);
+    } else if (segmentCount <= 200) {
+      return Math.min(this.baseWheelSize + 200 + (segmentCount - 50) * 2, this.maxWheelSize);
+    } else {
+      return this.maxWheelSize;
+    }
+  }
+
+  get fontSize(): number {
+    const segmentCount = this.segments.length;
+    
+    if (segmentCount <= 10) {
+      return 16;
+    } else if (segmentCount <= 30) {
+      return 14;
+    } else if (segmentCount <= 100) {
+      return 12;
+    } else if (segmentCount <= 300) {
+      return 10;
+    } else {
+      return 8;
+    }
+  }
+
+  // テキストを適切な長さに省略
+  private truncateText(text: string, maxLength: number): string {
+    if (text.length <= maxLength) {
+      return text;
+    }
+    return text.substring(0, maxLength - 1) + '…';
+  }
+
+  get maxTextLength(): number {
+    const segmentCount = this.segments.length;
+    
+    if (segmentCount <= 10) {
+      return 15;
+    } else if (segmentCount <= 30) {
+      return 12;
+    } else if (segmentCount <= 100) {
+      return 8;
+    } else if (segmentCount <= 300) {
+      return 6;
+    } else {
+      return 4;
+    }
+  }
 
   ngOnInit() {
     // Winwheel.jsライブラリのロード確認
@@ -67,6 +129,9 @@ export class Roulette implements OnInit, AfterViewInit, OnDestroy {
     
     // LocalStorageから設定を読み込み
     this.loadFromLocalStorage();
+    
+    // 項目表示を調整
+    this.adjustItemsPerPage();
     
     // オーディオコンテキストを初期化
     this.initializeAudio();
@@ -88,9 +153,12 @@ export class Roulette implements OnInit, AfterViewInit, OnDestroy {
             canvasId: this.canvasId,
             numSegments: this.segments.length,
             outerRadius: (this.wheelSize - 16) / 2 - 5,
-            segments: this.segments,
+            segments: this.segments.map(segment => ({
+              ...segment,
+              text: this.truncateText(segment.text, this.maxTextLength)
+            })),
             textAlignment: 'center',
-            textFontSize: 16,
+            textFontSize: this.fontSize,
             textFontFamily: 'Arial',
             textFillStyle: '#000000',
             lineWidth: 2,
@@ -240,8 +308,9 @@ export class Roulette implements OnInit, AfterViewInit, OnDestroy {
       ctx.rotate(startAngle + segmentAngle / 2);
       ctx.textAlign = 'center';
       ctx.fillStyle = '#000000';
-      ctx.font = '16px Arial';
-      ctx.fillText(segment.text, radius / 2, 5);
+      ctx.font = `${this.fontSize}px Arial`;
+      const displayText = this.truncateText(segment.text, this.maxTextLength);
+      ctx.fillText(displayText, radius / 2, 5);
       ctx.restore();
     });
 
@@ -302,8 +371,11 @@ export class Roulette implements OnInit, AfterViewInit, OnDestroy {
       ctx.rotate(startAngle + segmentAngle / 2);
       ctx.textAlign = 'center';
       ctx.fillStyle = index === this.lastResultIndex ? '#000000' : '#000000';
-      ctx.font = index === this.lastResultIndex ? 'bold 18px Arial' : '16px Arial';
-      ctx.fillText(segment.text, radius / 2, 5);
+      const isWinner = index === this.lastResultIndex;
+      const adjustedFontSize = isWinner ? Math.min(this.fontSize + 2, 18) : this.fontSize;
+      ctx.font = isWinner ? `bold ${adjustedFontSize}px Arial` : `${adjustedFontSize}px Arial`;
+      const displayText = this.truncateText(segment.text, this.maxTextLength);
+      ctx.fillText(displayText, radius / 2, 5);
       ctx.restore();
     });
 
@@ -387,6 +459,7 @@ export class Roulette implements OnInit, AfterViewInit, OnDestroy {
       this.newItem.color = '#FF6B6B';
       this.newItem.weight = 1;
       
+      this.adjustItemsPerPage();
       this.saveToLocalStorage();
       this.initializeWheel();
     }
@@ -440,6 +513,7 @@ export class Roulette implements OnInit, AfterViewInit, OnDestroy {
     const index = this.segments.indexOf(item);
     if (index > -1) {
       this.segments.splice(index, 1);
+      this.adjustItemsPerPage();
       this.saveToLocalStorage();
       this.initializeWheel();
     }
@@ -714,6 +788,7 @@ export class Roulette implements OnInit, AfterViewInit, OnDestroy {
 
       if (newSegments.length > 0) {
         this.segments = newSegments;
+        this.adjustItemsPerPage();
         this.saveToLocalStorage();
         this.initializeWheel();
         console.log(`CSV読み込み完了: ${newSegments.length}個の項目を追加しました`);
@@ -782,6 +857,67 @@ export class Roulette implements OnInit, AfterViewInit, OnDestroy {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  }
+
+  // フィルタリングされた項目を取得
+  get filteredSegments(): WheelSegment[] {
+    if (!this.searchTerm) {
+      return this.segments;
+    }
+    return this.segments.filter(segment => 
+      segment.text.toLowerCase().includes(this.searchTerm.toLowerCase())
+    );
+  }
+
+  // ページネーション用の項目を取得
+  get paginatedSegments(): WheelSegment[] {
+    const filtered = this.filteredSegments;
+    const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+    const endIndex = startIndex + this.itemsPerPage;
+    return filtered.slice(startIndex, endIndex);
+  }
+
+  // 総ページ数を計算
+  get totalPages(): number {
+    return Math.ceil(this.filteredSegments.length / this.itemsPerPage);
+  }
+
+  // ページ変更
+  changePage(page: number) {
+    if (page >= 1 && page <= this.totalPages) {
+      this.currentPage = page;
+    }
+  }
+
+  // 検索リセット
+  resetSearch() {
+    this.searchTerm = '';
+    this.currentPage = 1;
+  }
+
+  // 項目表示を動的に調整
+  adjustItemsPerPage() {
+    if (this.segments.length <= 20) {
+      this.itemsPerPage = 10;
+    } else if (this.segments.length <= 100) {
+      this.itemsPerPage = 20;
+    } else {
+      this.itemsPerPage = 50;
+    }
+    this.currentPage = 1;
+  }
+
+  // ページネーション表示用のページ配列を生成
+  get pageNumbers(): number[] {
+    return Array.from({ length: this.totalPages }, (_, i) => i + 1);
+  }
+
+  // 現在の表示範囲を取得
+  get displayRange(): string {
+    const start = (this.currentPage - 1) * this.itemsPerPage + 1;
+    const end = Math.min(this.currentPage * this.itemsPerPage, this.filteredSegments.length);
+    const total = this.filteredSegments.length;
+    return `${start} - ${end} / ${total} 件を表示`;
   }
 
   ngOnDestroy() {
