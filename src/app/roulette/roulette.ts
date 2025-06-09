@@ -58,6 +58,10 @@ export class Roulette implements OnInit, AfterViewInit, OnDestroy {
   currentPage = 1;
   itemsPerPage = 10;
 
+  // 現在指している項目
+  currentPointingSegment: WheelSegment | null = null;
+  private animationFrame: number | null = null;
+
   // デフォルトカラーパレット
   private defaultColors = [
     '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFEAA7', '#DDA0DD',
@@ -195,12 +199,15 @@ export class Roulette implements OnInit, AfterViewInit, OnDestroy {
     this.isSpinning = true;
     this.lastResult = null;
     this.lastResultIndex = -1;
+    this.currentPointingSegment = null;
 
     // クリック音の再生を開始
     this.startClickingSounds();
 
     if (this.wheel && this.wheel.startAnimation) {
       console.log('Starting Winwheel animation');
+      // Winwheelアニメーション中も現在指している項目を更新
+      this.startTrackingCurrentSegment();
       this.wheel.startAnimation();
     } else {
       console.log('Using fallback animation');
@@ -228,11 +235,14 @@ export class Roulette implements OnInit, AfterViewInit, OnDestroy {
       
       this.currentRotation = startRotation + totalRotation * easeOut;
       
+      // 現在指している項目を更新
+      this.updateCurrentPointingSegment();
+      
       // Canvasを回転させて描画
       this.drawRotatedWheel(this.currentRotation);
       
       if (progress < 1) {
-        requestAnimationFrame(animate);
+        this.animationFrame = requestAnimationFrame(animate);
       } else {
         // アニメーション完了、結果を決定
         // まず音を停止
@@ -256,6 +266,9 @@ export class Roulette implements OnInit, AfterViewInit, OnDestroy {
         
         // 結果を設定
         this.lastResult = result.text;
+        
+        // 現在指している項目をクリア
+        this.currentPointingSegment = null;
         
         // 当選位置マーカー付きで再描画
         setTimeout(() => {
@@ -427,6 +440,17 @@ export class Roulette implements OnInit, AfterViewInit, OnDestroy {
     ctx.closePath();
   }
 
+  // 現在指している項目を更新（右側ポインター基準）
+  private updateCurrentPointingSegment() {
+    // 右側ポインター（3時方向）が指すセグメントを計算
+    // ルーレットが時計回りに回転するので、ポインターの逆方向を計算
+    const currentAngle = (360 - (this.currentRotation % 360)) % 360;
+    
+    // セグメントインデックスを取得
+    const segmentIndex = this.getSegmentIndexFromAngle(currentAngle);
+    this.currentPointingSegment = this.segments[segmentIndex] || null;
+  }
+
   onSpinComplete(indicatedSegment: any) {
     // Winwheelライブラリ使用時のコールバック
     this.isSpinning = false;
@@ -440,6 +464,9 @@ export class Roulette implements OnInit, AfterViewInit, OnDestroy {
     
     // 当選セグメントのインデックスを取得
     this.lastResultIndex = this.segments.findIndex(segment => segment.text === indicatedSegment.text);
+    
+    // 現在指している項目をクリア
+    this.currentPointingSegment = null;
     
     // 当選位置マーカー付きで再描画
     setTimeout(() => {
@@ -920,8 +947,31 @@ export class Roulette implements OnInit, AfterViewInit, OnDestroy {
     return `${start} - ${end} / ${total} 件を表示`;
   }
 
+  // Winwheel使用時の追跡
+  private startTrackingCurrentSegment() {
+    const trackSegment = () => {
+      if (!this.isSpinning) {
+        return;
+      }
+      
+      if (this.wheel && this.wheel.rotationAngle !== undefined) {
+        this.currentRotation = this.wheel.rotationAngle;
+        this.updateCurrentPointingSegment();
+      }
+      
+      this.animationFrame = requestAnimationFrame(trackSegment);
+    };
+    
+    trackSegment();
+  }
+
   ngOnDestroy() {
     // クリック音のインターバルをクリーンアップ
     this.stopClickingSounds();
+    
+    // アニメーションフレームをクリーンアップ
+    if (this.animationFrame) {
+      cancelAnimationFrame(this.animationFrame);
+    }
   }
 }

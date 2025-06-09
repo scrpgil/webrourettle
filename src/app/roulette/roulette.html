@@ -1,5 +1,25 @@
 <div class="max-w-4xl mx-auto">
   <div class="bg-white rounded-lg shadow-lg p-6">
+    <!-- 現在指している項目表示 -->
+    @if (isSpinning && currentPointingSegment) {
+    <div class="mb-6 p-6 bg-gradient-to-r from-yellow-400 via-orange-400 to-red-500 text-white rounded-xl shadow-2xl border-4 border-yellow-300 animate-pulse">
+      <div class="flex items-center justify-center space-x-4">
+        <div class="text-4xl animate-bounce">🎯</div>
+        <div class="text-center min-w-0 flex-1">
+          <div class="text-lg font-semibold opacity-95 mb-1">現在指している項目</div>
+          <div 
+            class="text-3xl font-black leading-tight px-4 py-2 bg-white bg-opacity-20 rounded-lg backdrop-blur-sm"
+            [style.background-color]="currentPointingSegment.fillStyle + '40'"
+            [title]="currentPointingSegment.text"
+          >
+            <div class="truncate">{{ currentPointingSegment.text }}</div>
+          </div>
+        </div>
+        <div class="text-4xl animate-bounce">🎯</div>
+      </div>
+    </div>
+    }
+
     <!-- ルーレット本体 -->
     <div class="text-center mb-8">
       <div
