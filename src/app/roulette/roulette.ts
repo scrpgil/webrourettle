@@ -947,6 +947,14 @@ export class Roulette implements OnInit, AfterViewInit, OnDestroy {
     return `${start} - ${end} / ${total} 件を表示`;
   }
 
+  // 当選セグメントの色を取得
+  getWinnerSegmentColor(): string {
+    if (this.lastResultIndex >= 0 && this.lastResultIndex < this.segments.length) {
+      return this.segments[this.lastResultIndex].fillStyle;
+    }
+    return '#4ECDC4'; // デフォルト色
+  }
+
   // Winwheel使用時の追跡
   private startTrackingCurrentSegment() {
     const trackSegment = () => {

@@ -1,6 +1,6 @@
 <div class="max-w-4xl mx-auto">
   <div class="bg-white rounded-lg shadow-lg p-6">
-    <!-- 現在指している項目表示 -->
+    <!-- 回転中：現在指している項目表示 -->
     @if (isSpinning && currentPointingSegment) {
     <div class="mb-6 p-6 bg-gradient-to-r from-yellow-400 via-orange-400 to-red-500 text-white rounded-xl shadow-2xl border-4 border-yellow-300 animate-pulse">
       <div class="flex items-center justify-center space-x-4">
@@ -16,6 +16,40 @@
           </div>
         </div>
         <div class="text-4xl animate-bounce">🎯</div>
+      </div>
+    </div>
+    }
+
+    <!-- 当選結果表示 -->
+    @if (lastResult && !isSpinning) {
+    <div class="mb-6 p-8 bg-gradient-to-br from-yellow-300 via-green-400 via-emerald-500 to-blue-500 text-white rounded-2xl shadow-2xl border-4 border-yellow-300 relative overflow-hidden">
+      <!-- 背景装飾 -->
+      <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-20 animate-pulse"></div>
+      <div class="absolute top-0 left-0 w-full h-full">
+        <div class="absolute top-2 left-4 text-6xl opacity-30">✨</div>
+        <div class="absolute top-4 right-8 text-4xl opacity-40">🌟</div>
+        <div class="absolute bottom-2 left-8 text-5xl opacity-25">⭐</div>
+        <div class="absolute bottom-4 right-4 text-3xl opacity-35">💫</div>
+      </div>
+      
+      <!-- メインコンテンツ -->
+      <div class="relative z-10 flex items-center justify-center space-x-6">
+        <div class="text-5xl animate-bounce">🏆</div>
+        <div class="text-center min-w-0 flex-1">
+          <div class="text-xl font-bold opacity-95 mb-2 tracking-wide">🎊 当選おめでとうございます！ 🎊</div>
+          <div 
+            class="text-5xl font-black leading-tight px-8 py-4 bg-white bg-opacity-30 rounded-2xl backdrop-blur-md border-3 border-white border-opacity-40 shadow-inner"
+            [style.background-color]="getWinnerSegmentColor() + '50'"
+            [style.border-color]="getWinnerSegmentColor() + '80'"
+            [title]="lastResult"
+          >
+            <div class="truncate drop-shadow-lg">{{ lastResult }}</div>
+          </div>
+          <div class="text-sm opacity-80 mt-2 font-medium">
+            確率: {{ getSegmentPercentage(segments[lastResultIndex]) }}%
+          </div>
+        </div>
+        <div class="text-5xl animate-bounce">🏆</div>
       </div>
     </div>
     }
@@ -73,21 +107,6 @@
       </button>
     </div>
 
-    <!-- 結果表示 -->
-    @if (lastResult) {
-    <div
-      class="bg-gradient-to-r from-green-400 to-blue-500 text-white px-6 py-4 rounded-lg mb-6 shadow-lg animate-pulse"
-    >
-      <div class="flex items-center justify-center space-x-3">
-        <div class="text-2xl">🎉</div>
-        <div>
-          <div class="text-sm font-medium">当選結果</div>
-          <div class="text-xl font-bold">{{ lastResult }}</div>
-        </div>
-        <div class="text-2xl">🎉</div>
-      </div>
-    </div>
-    }
 
     <!-- 設定セクション -->
     <div class="border-t pt-6">
